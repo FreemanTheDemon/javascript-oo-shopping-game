@@ -28,7 +28,6 @@ function Product(id, name, price, expiryDate) {
 }
 // Complete the dateDiff function
 const dateDiff = (date1, date2) => {
-    console.log(Math.ceil(Math.abs(date1.getTime() - date2.getTime()) / (1000 * 3600 * 24)));
     return Math.ceil(Math.abs(date1.getTime() - date2.getTime()) / (1000 * 3600 * 24));
 };
 
@@ -77,7 +76,7 @@ const loadProducts = (map, prodId) => {
     let a = new Array();
     try {
         // Call Object.keys() to load the property names of the Product object in to prodKeys array here
-        let prodKeys = [];
+        let prodKeys = Object.keys(new Product());
 
         let iterator_obj = map.entries();
 
@@ -87,7 +86,7 @@ const loadProducts = (map, prodId) => {
                 const value = item[1];
 
                 // Create and assign an instance of Product to prodObj here
-                let prodObj;
+                let prodObj = new Product();
 
                 if (prodObj != undefined && prodObj != null) {
                     for (let i = 0; i < prodKeys.length; i++) {
@@ -121,7 +120,7 @@ const loadMagicProducts = (map, prodId) => {
     let a = new Array();
     try {
         // Call Object.key() to load the property names of the MagicProduct object in to magProdKeys array here
-        let magProdKeys = [];
+        let magProdKeys = Object.keys(new MagicProduct());
 
         let iterator_obj = map.entries();
 
@@ -131,7 +130,7 @@ const loadMagicProducts = (map, prodId) => {
                 const value = item[1];
 
                 // Create and assign an instance of MagicProduct to prodObj here
-                let magProdObj;
+                let magProdObj = new MagicProduct();
 
                 if (magProdObj != undefined && magProdObj != null) {
                     for (let i = 0; i < magProdKeys.length; i++) {
@@ -212,10 +211,20 @@ function loadMasterData() {
 }
 
 // Complete this function
-const findProductById = (id) => {};
+const findProductById = (id) => {
+    return function() {
+        let testProd = new Product();
+        if (this.id === testProd.id) {
+            return true;
+        }
+        return false;
+    }
+};
 
 // Complete this function
-const generateProductId = () => {};
+const generateProductId = () => {
+    return Math.floor(Math.random() * (20) + 1);
+};
 
 
 const getProduct = (prodList, pId) => {
@@ -224,7 +233,9 @@ const getProduct = (prodList, pId) => {
 
 
 // Complete this function
-const calculateBill = (prod, tBill) => {};
+const calculateBill = (prod, tBill) => {
+    return prod.price + tBill;
+};
 
 const findPointsToBill = (roundedTotal) => {
     if (roundedTotal > 10 && roundedTotal <= 100) {
@@ -246,12 +257,25 @@ const findPointsToBill = (roundedTotal) => {
 
 
 // Complete this function
-const findPointsForExpDate = (prod) => {};
+const findPointsForExpDate = (prod) => {
+    if (prod.daysToExpire < 30) {
+        return 10;
+    }
+    return 0;
+};
 
 
 const calculatePoints = (prod, tBill) => {
     let pointsToBill = findPointsToBill(Math.round(tBill));
     let pointsForExpDate = findPointsForExpDate(prod);
+    player.score = player.score + pointsToBill + pointsForExpDate;
+    if (prod instanceof MagicProduct) {
+        if (prod.isBonus) {
+            player.addPoints(prod.points);
+        } else {
+            player.deductPoints(prod.points);
+        }
+    }
 };
 
 // Complete this function
@@ -268,6 +292,7 @@ function init(data) {
 
         rl.question("What's your name? ", function (name) {
             // Assign the player object's name property to the user entered name here
+            player.name = name;
             console.log(`Welcome ${player.name} !!!`.blue);
             start(data);
         });
@@ -290,23 +315,29 @@ function init(data) {
     const shop = (prodList, tBill, lastProd) => {
         let totalBill = tBill;
         const prId = generateProductId();
-        let product = null; // Assign the value of product here
-        let productDetails = null; // Assign the value of productDetails here
+        let product = (!Object.is(lastProd, undefined)) ? lastProd : getProduct(prodList, prId);
+
+        let productDetails = product.getDetails(); // Assign the value of productDetails here
 
         rl.question(`You can buy - ${productDetails}.\n Do you want to buy this item <Y/N>? `.yellow, function (option) {
-            const regexYes = null; // Use the RegExp built-in object type here as appropriate
-            const regexNo = null; // Use the RegExp built-in object type here as appropriate
+            const regexYes = new RegExp('y', 'i'); // Use the RegExp built-in object type here as appropriate
+            const regexNo = new RegExp('n', 'i'); // Use the RegExp built-in object type here as appropriate
             if (regexYes.test(option)) {
                 totalBill = calculateBill(product, totalBill);
                 calculatePoints(product, totalBill);
                 console.log(`${player.name} you earned ${player.getCurrentScore()} points!`.bold);
                 if (player.score >= 500) {
                     // Define and set new property status in the player object here
+                    Object.defineProperty(player, 'status', {
+                        value: 'Shopping Master'
+                    });
                     exitWon();
                 } else {
                     let iCount = ++player.items;
                     // Make the Object.defineProperty() call here to set the value of items using the value of iCount
-                    
+                    Object.defineProperty(player, 'items', {
+                        value: iCount
+                    });
                     if (player.items < 10) {
                         shop(prodList, totalBill);
                     } else {
@@ -330,15 +361,16 @@ function init(data) {
     // Complete this function
     const rateAndExit = () => {
         // Create a new instance of Rating and assign it to a variable named playerRating here
+        let playerRating = new Rating();
         rl.question("How would you rate this game on a scale of 1-10 (1 being the lowest)?:", function (r) {
             if (r == "" || isNaN(r) || r == 0 || r > 10) {
                 console.log("Invalid rating! Please nter a number from 1 - 10".red);
                 rateAndExit();
             } else {
                 // Call rating setter method of playerRating to set user entered rate value here
-                
+                playerRating.rating = r;
                 // Call Object.assign() method here to populate target
-                
+                let target = Object.assign({}, player, playerRating);
                 console.log(`${target.name} you rated this game as ${target.rate}`.green);
                 console.log("Thank you for your valuable feedback.".blue);
                 rl.close();
@@ -348,22 +380,22 @@ function init(data) {
 
     // Complete this function
     const exitLost = () => {
-        let pointsToReach; // Assign calculated value to pointsToReach here
+        let pointsToReach = 500 - player.getCurrentScore(); // Assign calculated value to pointsToReach here
         console.log(`Your chances are over! You are short of ${pointsToReach} to become a Shopping Master. Good Luck for next time!`.yellow);
         rateAndExit();
     };
 
     // Complete this function
     const exitWon = () => {
-        let finalStatus; 
+        let finalStatus = player.status; 
         console.log(`Congratulations!!! You became ${finalStatus}!`.blue);
         rateAndExit();
     };
 
     // Uncomment this function once you fully implement the game to be able to run it
-    // (function setGameCompleteFlag(){
-    //     gameComplete = true;
-    // })();
+    (function setGameCompleteFlag(){
+        gameComplete = true;
+    })();
 
     function main() {
         let products = loadMasterData();
